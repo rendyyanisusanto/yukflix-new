@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Yukflix Homepage</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&amp;family=Open+Sans:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#c11267",
+              "background-light": "#f3f4f6", // Light grey for light mode
+              "background-dark": "#0f1115", // Deep dark blue/black for dark mode
+              "surface-light": "#ffffff",
+              "surface-dark": "#1a1d23",
+            },
+            fontFamily: {
+              display: ["Montserrat", "sans-serif"],
+              body: ["Open Sans", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              xl: "1rem",
+            },
+          },
+        },
+      };
+    </script>
+<style>
+        .gradient-text {
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            background-image: linear-gradient(to right, #c11267, #e94e77);
+        }
+        .hero-overlay {
+            background: linear-gradient(to top, #0f1115 10%, rgba(15, 17, 21, 0.4) 60%, rgba(15, 17, 21, 0.1) 100%);
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f1115; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #c11267; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-gray-800 dark:text-gray-100 font-body transition-colors duration-300">
+<nav class="fixed w-full z-50 transition-all duration-300 bg-gradient-to-b from-black/70 to-transparent dark:from-black/90">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex items-center justify-between h-20">
+<div class="flex-shrink-0">
+<img alt="Yukflix Logo" class="h-8 md:h-10 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDGQEc3jlzXoR1uiH70tV0oh-zplYLkslN9xUliBaq3Am_37vv_8v4foKn898zRC5CSE5OSFgy7ecN9P_jhVKy7IQJbQB9kGbgGthHLRGDDMw_LsxXS8NqKF_ttpg1v59Qyi5ovovOL9eWBjAQuhV1jvlRTwGHpFuFTiKDmRzAV1ghtAn559iwAD7Bgn2iT2Y8ZDVppJFaZyNRw9sjNg8U-SZKU5BH3hofCNxkjbchlols792Nof3G3IPGseLamUEzPVMNQNW8oSqs"/>
+</div>
+<div class="hidden md:block">
+<div class="ml-10 flex items-baseline space-x-8">
+<a class="text-white hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors" href="#">Home</a>
+<a class="text-gray-300 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors" href="#">Series</a>
+<a class="text-gray-300 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors" href="#">Movies</a>
+<a class="text-gray-300 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors" href="#">My List</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-gray-300 hover:text-primary p-1 rounded-full focus:outline-none">
+<span class="material-icons">search</span>
+</button>
+<button class="text-gray-300 hover:text-primary p-1 rounded-full focus:outline-none">
+<span class="material-icons">notifications</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-gradient-to-tr from-primary to-purple-500 overflow-hidden border-2 border-white/20">
+<img alt="User Avatar" class="h-full w-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA9CNCnjcSGR1JMvVIlBJmH1d93FCWvZ2Qr1Q-4BvskcRmC7bAFzE_Xi3908xCNexlq1ApneBAE04hetUXQdcn42i6n6dST54vnOs7riiDNRppXUqnsy2oCKB6cqr4AOBSFRh2pnI56zPSUh95vPuWYaWTvxglkdmqWjQXkuupMyRX3lXNywT7tI0uNiuPIjS-4HTf8SG889qO4qriJBwdhWIGojN0Ww-Fq_QfjYsaLEQNESWz6QnLUzmXg8L9m8WerGPZMAzx9dY0"/>
+</div>
+</div>
+</div>
+</div>
+</nav>
+<header class="relative h-screen min-h-[600px] w-full overflow-hidden">
+<div class="absolute inset-0">
+<img alt="Impian 1000 Pulau Movie Scene" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZ3e5ohrV5_9mo4QBybYYS40RlXYB_R2j45Qh_Y5_suT6mLo-xZKMPuZVCEAsK6JG6qMCa0jXqb8B_6WetCBJiP1TnlnD7ZhWSlPxCGkWnGuRzybbhUmwm6iGxnieG6v0q-qZNq1HggyMbETKqaRbpwc5O_hC_YmjM3mgIhpAZZTtVI4j1vrOnW59BkULB32v7W7RCLDrUIgU2ztHVgGqmjHYCpiyaBI2wjTSuQ7NairapSA-AkcsRV69EC_zhHyBfgxeUv54iERc"/>
+<div class="hero-overlay absolute inset-0"></div>
+</div>
+<div class="relative z-10 h-full flex items-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
+<div class="w-full md:w-2/3 lg:w-1/2">
+<div class="glass-panel p-6 md:p-8 rounded-xl shadow-2xl bg-white/5 dark:bg-black/30 backdrop-blur-md border border-white/10">
+<h1 class="font-display text-4xl md:text-6xl font-extrabold text-white mb-2 leading-tight">
+                        Impian 1000 Pulau
+                    </h1>
+<div class="flex flex-wrap items-center gap-4 text-sm text-gray-300 mb-4 font-medium">
+<span class="bg-primary px-2 py-0.5 rounded text-white text-xs font-bold uppercase tracking-wider">New</span>
+<span>2023</span>
+<span class="w-1 h-1 bg-gray-500 rounded-full"></span>
+<span>1h 58m</span>
+<span class="w-1 h-1 bg-gray-500 rounded-full"></span>
+<span>Drama, Adventure</span>
+</div>
+<p class="text-gray-200 text-sm md:text-base mb-6 line-clamp-3 leading-relaxed">
+                        A visually stunning journey across the archipelago. When dreams clash with reality, one thousand islands bear witness to a story of hope, perseverance, and the unyielding spirit of youth chasing the horizon.
+                    </p>
+<div class="flex flex-col sm:flex-row gap-4 mb-6">
+<button class="flex items-center justify-center gap-2 bg-primary hover:bg-opacity-90 text-white font-bold py-3 px-8 rounded-full transition-transform transform hover:scale-105 shadow-lg shadow-primary/30">
+<span class="material-icons">play_arrow</span>
+                            Watch Now
+                        </button>
+<button class="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-6 rounded-full backdrop-blur-sm transition-colors border border-white/20">
+<span class="material-icons">movie</span>
+                            Trailer
+                        </button>
+<button class="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-6 rounded-full backdrop-blur-sm transition-colors border border-white/20">
+<span class="material-icons">headphones</span>
+                            OST
+                        </button>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-gray-400 hover:text-white transition-colors p-2 rounded-full border border-gray-600 hover:border-white">
+<span class="material-icons">add</span>
+</button>
+<span class="text-xs text-gray-400 uppercase tracking-widest">Add to My List</span>
+</div>
+</div>
+</div>
+</div>
+</header>
+<main class="relative z-20 -mt-24 pb-20">
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
+<div class="flex items-center justify-between mb-6">
+<h2 class="text-2xl font-display font-bold text-gray-900 dark:text-white border-l-4 border-primary pl-4">Behind The Scenes</h2>
+<div class="flex gap-2">
+<button class="bg-surface-light dark:bg-surface-dark p-2 rounded-full shadow hover:bg-primary hover:text-white transition text-gray-500 dark:text-gray-400">
+<span class="material-icons text-sm">arrow_back_ios</span>
+</button>
+<button class="bg-surface-light dark:bg-surface-dark p-2 rounded-full shadow hover:bg-primary hover:text-white transition text-gray-500 dark:text-gray-400">
+<span class="material-icons text-sm">arrow_forward_ios</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<div class="group relative overflow-hidden rounded-xl aspect-video cursor-pointer shadow-lg">
+<img alt="Behind the scenes filming set" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAxghJLHS1QBxDunGSBABPinEp4qRh7APkp76iezq7rLUXywXrq_wDlhCqckhfb8aCO0fomBj31n02FjGIT3HEmLR52ZNDnZHTpkjkh6dSs62fSedXnuXVKNmUCIhtAp7VQCdYlWYrI9JJhT4iD7e1lrxCPSp4e5j43rwvZnooE7bicBUnYc7t3uo30wvS2n-Dta_cag-n5ZdIPbXovxFcB6athaLu4HHcES7Z_ylpQH3Z0pHE10rzl4mf_ZET2ggUNcRsC9qm0yXA"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
+<h3 class="text-white font-bold text-lg">On Set: The Bamboo House</h3>
+<p class="text-gray-300 text-sm">Making of the iconic scene</p>
+</div>
+<div class="absolute top-4 right-4 bg-black/60 backdrop-blur px-2 py-1 rounded text-xs text-white font-medium flex items-center gap-1">
+<span class="material-icons text-xs">camera_alt</span> BTS
+                    </div>
+</div>
+<div class="group relative overflow-hidden rounded-xl aspect-video cursor-pointer shadow-lg">
+<img alt="Director chair on set" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxrFx7supaouanKZN0-yo58gXj0EZC6AJSakHXJUzZW0wYjIIOqn_lKc9gibd9sLvmw3fRIXCpjaXjxYW6Fr-UBSJ6rdlGh1M83HkkR8MTLaQh-nngQ60FWkPR0miLfZsWcCwXRso3240rEU8CdljwjRUdyKPFfOWbbs0UnzlVJsxVECr1b3Q64hEGiWm8QCj6utetXVHXRh0NUa93GBsOLshgsXV6ovbLzvOeX-7i3uTAeToOVBzeDN7DpYqVb5Bpjl4DZrRJS1w"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
+<h3 class="text-white font-bold text-lg">Director's Vision</h3>
+<p class="text-gray-300 text-sm">Interview with the creator</p>
+</div>
+</div>
+<div class="group relative overflow-hidden rounded-xl aspect-video cursor-pointer shadow-lg">
+<img alt="Film crew working" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3uJKWDaZS-TPLneRqj5INAuScXOozuh6zlmvvy7j622NI2zrcQd0bgHysiWXWwQeb-rdMtHadA86_iDLOsbcregnlfFY72EUw1_K3zAlgRelTd_T_bDhLkeSDxKlLMpY9qC2LlXN7F9BOvS9qLHBJcANZjRF3T4w44sOWxXNVvpe-idTc4Akw1q96sVapnjOZE0r4vFH6lnb9mVUeM04d2dUsL-nfqFncl1I1GX-AKo2eGy77ScTglCMKkwEW1grLGCx7svoJcDs"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
+<h3 class="text-white font-bold text-lg">Sound Engineering</h3>
+<p class="text-gray-300 text-sm">Capturing the ocean breeze</p>
+</div>
+</div>
+</div>
+</section>
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
+<h2 class="text-2xl font-display font-bold text-gray-900 dark:text-white mb-8 flex items-center gap-2">
+<span class="material-icons text-primary">upcoming</span> Coming Soon
+            </h2>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+<div class="relative rounded-xl overflow-hidden shadow-2xl group transition-all duration-300 hover:scale-[1.02]">
+<div class="aspect-[2/3] w-full relative">
+<img alt="Project of Nobody Poster" class="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvGx1FRzFNv408qedCw_fe9dqhxbx77l7aBplhCWlfqsOzKYh04Izdmmw91wm4AvflDsHwDMNOpJ_3CUvn1f-cs7hgYQ5lDXI03zASuqy6Omygli4KohdIsBX24o0mUKoEIw5H0dxqgSfSk-dUDSq8LeOIXy3kgozHtJgTgHR5XFPW6mAutkJ1g_rDu-4oApZ3_jkRZEaOOosPgGrDXXIHqgB1ld7qXUQ9nR3CpGAyGHUc0Ij4rbzU5xIdvpWhyrqFzI08j0Z4LVU"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark via-transparent to-transparent opacity-90"></div>
+<div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-5">
+<span class="inline-block bg-primary text-white text-[10px] w-fit px-2 py-0.5 rounded mb-2 uppercase tracking-wide font-bold">Documentary</span>
+<h3 class="text-xl font-display font-bold text-white mb-1 leading-tight">Project of Nobody</h3>
+<p class="text-gray-300 text-xs mb-3 line-clamp-3">Witness the unspoken stories of resilience from around the globe in this gripping series.</p>
+<button class="w-full text-white border border-white hover:bg-white hover:text-black py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors">
+                            Remind Me
+                        </button>
+</div>
+<div class="absolute bottom-0 left-0 right-0 p-4 transition-opacity duration-300 group-hover:opacity-0">
+<h3 class="text-lg font-display font-bold text-white mb-1 drop-shadow-md">Project of Nobody</h3>
+<span class="text-primary text-xs font-bold uppercase tracking-wide">Coming 2024</span>
+</div>
+</div>
+</div>
+<div class="relative rounded-xl overflow-hidden shadow-2xl group transition-all duration-300 hover:scale-[1.02]">
+<div class="aspect-[2/3] w-full relative">
+<img alt="Mentari Kembar Poster" class="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnfrtVdBpDJwRgFCrtthffotPJZUVA-HbtH9LhjtsmXauaSn_3oGCYoCY4FJyTrhUcDTrmf1rO5qjpptBSQSg9IiXxYwn5Sic5JEfIpFtIzRwMC3Fu6tkylzI72vlngV3zd-Y1ayArDPM29rOkFn69X9GyW4dJAMjlRwQ5FuOaAdt9ixXS1_Sw9B5bzYPBANRxwlduGbE3JAQwbNMsUGVQTZGz26X09cf7BIsRFwxOsuB820GcInzYHX4zsXfyjBqgNyQWuL2vXnk"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark via-transparent to-transparent opacity-90"></div>
+<div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-5">
+<span class="inline-block bg-blue-600 text-white text-[10px] w-fit px-2 py-0.5 rounded mb-2 uppercase tracking-wide font-bold">Sci-Fi</span>
+<h3 class="text-xl font-display font-bold text-white mb-1 leading-tight">Mentari Kembar</h3>
+<p class="text-gray-300 text-xs mb-3 line-clamp-3">Two worlds collide. The past meets the future in a saga that spans generations and dimensions.</p>
+<button class="w-full text-white border border-white hover:bg-white hover:text-black py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors">
+                            Remind Me
+                        </button>
+</div>
+<div class="absolute bottom-0 left-0 right-0 p-4 transition-opacity duration-300 group-hover:opacity-0">
+<h3 class="text-lg font-display font-bold text-white mb-1 drop-shadow-md">Mentari Kembar</h3>
+<span class="text-blue-500 text-xs font-bold uppercase tracking-wide">Coming Soon</span>
+</div>
+</div>
+</div>
+<div class="relative rounded-xl overflow-hidden shadow-2xl group transition-all duration-300 hover:scale-[1.02]">
+<div class="aspect-[2/3] w-full relative">
+<img alt="Urban Legends Poster" class="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvGx1FRzFNv408qedCw_fe9dqhxbx77l7aBplhCWlfqsOzKYh04Izdmmw91wm4AvflDsHwDMNOpJ_3CUvn1f-cs7hgYQ5lDXI03zASuqy6Omygli4KohdIsBX24o0mUKoEIw5H0dxqgSfSk-dUDSq8LeOIXy3kgozHtJgTgHR5XFPW6mAutkJ1g_rDu-4oApZ3_jkRZEaOOosPgGrDXXIHqgB1ld7qXUQ9nR3CpGAyGHUc0Ij4rbzU5xIdvpWhyrqFzI08j0Z4LVU"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark via-transparent to-transparent opacity-90"></div>
+<div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-5">
+<span class="inline-block bg-purple-600 text-white text-[10px] w-fit px-2 py-0.5 rounded mb-2 uppercase tracking-wide font-bold">Mystery</span>
+<h3 class="text-xl font-display font-bold text-white mb-1 leading-tight">Urban Legends</h3>
+<p class="text-gray-300 text-xs mb-3 line-clamp-3">Deep in the city streets, ancient myths come to life. Who will survive the night?</p>
+<button class="w-full text-white border border-white hover:bg-white hover:text-black py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors">
+                            Remind Me
+                        </button>
+</div>
+<div class="absolute bottom-0 left-0 right-0 p-4 transition-opacity duration-300 group-hover:opacity-0">
+<h3 class="text-lg font-display font-bold text-white mb-1 drop-shadow-md">Urban Legends</h3>
+<span class="text-purple-500 text-xs font-bold uppercase tracking-wide">Nov 2024</span>
+</div>
+</div>
+</div>
+<div class="relative rounded-xl overflow-hidden shadow-2xl group transition-all duration-300 hover:scale-[1.02]">
+<div class="aspect-[2/3] w-full relative">
+<img alt="Starlight Poster" class="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnfrtVdBpDJwRgFCrtthffotPJZUVA-HbtH9LhjtsmXauaSn_3oGCYoCY4FJyTrhUcDTrmf1rO5qjpptBSQSg9IiXxYwn5Sic5JEfIpFtIzRwMC3Fu6tkylzI72vlngV3zd-Y1ayArDPM29rOkFn69X9GyW4dJAMjlRwQ5FuOaAdt9ixXS1_Sw9B5bzYPBANRxwlduGbE3JAQwbNMsUGVQTZGz26X09cf7BIsRFwxOsuB820GcInzYHX4zsXfyjBqgNyQWuL2vXnk"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark via-transparent to-transparent opacity-90"></div>
+<div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-5">
+<span class="inline-block bg-emerald-600 text-white text-[10px] w-fit px-2 py-0.5 rounded mb-2 uppercase tracking-wide font-bold">Fantasy</span>
+<h3 class="text-xl font-display font-bold text-white mb-1 leading-tight">Starlight</h3>
+<p class="text-gray-300 text-xs mb-3 line-clamp-3">A journey to the stars starts with a single wish. Join the adventure of a lifetime.</p>
+<button class="w-full text-white border border-white hover:bg-white hover:text-black py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors">
+                            Remind Me
+                        </button>
+</div>
+<div class="absolute bottom-0 left-0 right-0 p-4 transition-opacity duration-300 group-hover:opacity-0">
+<h3 class="text-lg font-display font-bold text-white mb-1 drop-shadow-md">Starlight</h3>
+<span class="text-emerald-500 text-xs font-bold uppercase tracking-wide">Dec 2024</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+<div class="text-center mb-10">
+<h2 class="text-3xl font-display font-bold text-gray-900 dark:text-white mb-2">Frequently Asked Questions</h2>
+<p class="text-gray-500 dark:text-gray-400">Everything you need to know about Yukflix</p>
+</div>
+<div class="space-y-4">
+<div class="bg-surface-light dark:bg-surface-dark rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+<details class="group p-4 [&amp;_summary::-webkit-details-marker]:hidden">
+<summary class="flex cursor-pointer items-center justify-between gap-1.5 text-gray-900 dark:text-white">
+<h3 class="font-medium">What is Yukflix?</h3>
+<span class="relative h-5 w-5 shrink-0">
+<span class="material-icons absolute inset-0 opacity-100 group-open:opacity-0 transition-opacity">add</span>
+<span class="material-icons absolute inset-0 opacity-0 group-open:opacity-100 transition-opacity text-primary">remove</span>
+</span>
+</summary>
+<p class="mt-4 leading-relaxed text-gray-600 dark:text-gray-300">
+                            Yukflix is a premium streaming platform offering a wide variety of award-winning TV shows, movies, anime, documentaries, and more on thousands of internet-connected devices.
+                        </p>
+</details>
+</div>
+<div class="bg-surface-light dark:bg-surface-dark rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+<details class="group p-4 [&amp;_summary::-webkit-details-marker]:hidden">
+<summary class="flex cursor-pointer items-center justify-between gap-1.5 text-gray-900 dark:text-white">
+<h3 class="font-medium">How much does Yukflix cost?</h3>
+<span class="relative h-5 w-5 shrink-0">
+<span class="material-icons absolute inset-0 opacity-100 group-open:opacity-0 transition-opacity">add</span>
+<span class="material-icons absolute inset-0 opacity-0 group-open:opacity-100 transition-opacity text-primary">remove</span>
+</span>
+</summary>
+<p class="mt-4 leading-relaxed text-gray-600 dark:text-gray-300">
+                            Watch Yukflix on your smartphone, tablet, Smart TV, laptop, or streaming device, all for one fixed monthly fee. Plans range from $9.99 to $19.99 a month. No extra costs, no contracts.
+                        </p>
+</details>
+</div>
+<div class="bg-surface-light dark:bg-surface-dark rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+<details class="group p-4 [&amp;_summary::-webkit-details-marker]:hidden">
+<summary class="flex cursor-pointer items-center justify-between gap-1.5 text-gray-900 dark:text-white">
+<h3 class="font-medium">Where can I watch?</h3>
+<span class="relative h-5 w-5 shrink-0">
+<span class="material-icons absolute inset-0 opacity-100 group-open:opacity-0 transition-opacity">add</span>
+<span class="material-icons absolute inset-0 opacity-0 group-open:opacity-100 transition-opacity text-primary">remove</span>
+</span>
+</summary>
+<p class="mt-4 leading-relaxed text-gray-600 dark:text-gray-300">
+                            Watch anywhere, anytime. Sign in with your Yukflix account to watch instantly on the web at yukflix.com from your personal computer or on any internet-connected device that offers the Yukflix app.
+                        </p>
+</details>
+</div>
+<div class="bg-surface-light dark:bg-surface-dark rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+<details class="group p-4 [&amp;_summary::-webkit-details-marker]:hidden">
+<summary class="flex cursor-pointer items-center justify-between gap-1.5 text-gray-900 dark:text-white">
+<h3 class="font-medium">How do I cancel?</h3>
+<span class="relative h-5 w-5 shrink-0">
+<span class="material-icons absolute inset-0 opacity-100 group-open:opacity-0 transition-opacity">add</span>
+<span class="material-icons absolute inset-0 opacity-0 group-open:opacity-100 transition-opacity text-primary">remove</span>
+</span>
+</summary>
+<p class="mt-4 leading-relaxed text-gray-600 dark:text-gray-300">
+                           Yukflix is flexible. There are no pesky contracts and no commitments. You can easily cancel your account online in two clicks. There are no cancellation fees – start or stop your account anytime.
+                        </p>
+</details>
+</div>
+</div>
+</section>
+</main>
+<footer class="bg-surface-light dark:bg-surface-dark border-t border-gray-200 dark:border-gray-800 pt-16 pb-8">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+<div>
+<img alt="Yukflix Logo" class="h-8 mb-6 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcKdZBjJkCG-lgSqynlYURUSvp6TDRT4Y6-DeIHf-RmsvSXR1qyfh69o4mWla4_-3eNWcGX0KUZ0_y34F5fqsVaQpxeH1tdQHRjoQ2MyRauwoHXXEOswqH3Ovq4cTY2cuAseFPIqP2kNOPvD_UaCYbCPQptMDDwJA5Fv4gXk2avCFytgaN1pfV3aqb6aHm9nd-QZtyFf8o0gXheOsz6XqJjsgJ-zL3mCLbuQffh52DTgpWO0HGfHxrqFq2zkjq7E-uh2mKPid9FXU"/>
+<div class="flex space-x-4">
+<a class="text-gray-400 hover:text-primary" href="#"><span class="material-icons">facebook</span></a>
+<a class="text-gray-400 hover:text-primary" href="#"><span class="material-icons">camera_alt</span></a>
+<a class="text-gray-400 hover:text-primary" href="#"><span class="material-icons">alternate_email</span></a>
+<a class="text-gray-400 hover:text-primary" href="#"><span class="material-icons">ondemand_video</span></a>
+</div>
+</div>
+<div>
+<h4 class="text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-4">Company</h4>
+<ul class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+<li><a class="hover:text-primary" href="#">About Us</a></li>
+<li><a class="hover:text-primary" href="#">Careers</a></li>
+<li><a class="hover:text-primary" href="#">Press</a></li>
+<li><a class="hover:text-primary" href="#">Blog</a></li>
+</ul>
+</div>
+<div>
+<h4 class="text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-4">Support</h4>
+<ul class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+<li><a class="hover:text-primary" href="#">Contact Us</a></li>
+<li><a class="hover:text-primary" href="#">Help Center</a></li>
+<li><a class="hover:text-primary" href="#">Redeem Voucher</a></li>
+</ul>
+</div>
+<div>
+<h4 class="text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white mb-4">Legal</h4>
+<ul class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+<li><a class="hover:text-primary" href="#">Terms of Use</a></li>
+<li><a class="hover:text-primary" href="#">Privacy Policy</a></li>
+<li><a class="hover:text-primary" href="#">Cookie Preferences</a></li>
+</ul>
+</div>
+</div>
+<div class="border-t border-gray-200 dark:border-gray-800 pt-8 text-center md:text-left flex flex-col md:flex-row justify-between items-center text-sm text-gray-500 dark:text-gray-500">
+<p>© 2023 Yukflix. All rights reserved.</p>
+<p>Made with design taste.</p>
+</div>
+</div>
+</footer>
+<script>
+        // Simple dark mode toggle for demonstration purposes (checks system preference)
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        } else {
+            // Default to dark mode as per prompt request "A dark-themed desktop web homepage"
+            document.documentElement.classList.add('dark'); 
+        }
+        // Navigation scroll effect
+        window.addEventListener('scroll', function() {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 50) {
+                nav.classList.add('bg-surface-light', 'dark:bg-background-dark', 'shadow-md');
+                nav.classList.remove('bg-gradient-to-b');
+            } else {
+                nav.classList.remove('bg-surface-light', 'dark:bg-background-dark', 'shadow-md');
+                nav.classList.add('bg-gradient-to-b');
+            }
+        });
+    </script>
+</body></html>
