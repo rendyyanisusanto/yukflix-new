@@ -7,8 +7,14 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+app/node_modules
+backend/node_modules
+
+# Production builds
 dist
+app/dist
 dist-ssr
 *.local
 
@@ -25,7 +31,12 @@ dist-ssr
 
 # Environment variables
 .env
+.env.*
+app/.env
+app/.env.*
+backend/.env
+backend/.env.*
 
-.env.production
-prd.md
-
+# Local Media Uploads
+backend/uploads/*
+!backend/uploads/.gitkeep

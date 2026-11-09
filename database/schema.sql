@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS films (
   backdrop_url TEXT,
   is_featured BOOLEAN DEFAULT false,
   is_coming_soon BOOLEAN DEFAULT false,
+  embed_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
