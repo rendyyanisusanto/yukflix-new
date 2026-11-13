@@ -38,11 +38,25 @@ CREATE TABLE IF NOT EXISTS `challenge_videos` (
   CONSTRAINT `fk_cv_challenge` FOREIGN KEY (`challenge_id`) REFERENCES `film_challenges` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 2.5. Challenge Question Categories Table
+CREATE TABLE IF NOT EXISTS `challenge_question_categories` (
+  `id` VARCHAR(36) PRIMARY KEY,
+  `name` VARCHAR(150) NOT NULL UNIQUE,
+  `description` TEXT DEFAULT NULL,
+  `order_num` INT NOT NULL DEFAULT 1,
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_cqc_order` (`order_num`),
+  INDEX `idx_cqc_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 3. Challenge Questions Table
 CREATE TABLE IF NOT EXISTS `challenge_questions` (
   `id` VARCHAR(36) PRIMARY KEY,
   `challenge_id` VARCHAR(36) NOT NULL,
   `video_id` VARCHAR(36) NOT NULL,
+  `category_id` VARCHAR(36) DEFAULT NULL,
   `category` VARCHAR(100) NOT NULL,
   `question_text` TEXT NOT NULL,
   `answer_type` ENUM('essay', 'single_choice', 'multiple_choice') NOT NULL DEFAULT 'essay',
@@ -53,9 +67,11 @@ CREATE TABLE IF NOT EXISTS `challenge_questions` (
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX `idx_cq_challenge` (`challenge_id`),
   INDEX `idx_cq_video` (`video_id`),
+  INDEX `idx_cq_category` (`category_id`),
   INDEX `idx_cq_order` (`question_order`),
   CONSTRAINT `fk_cq_challenge` FOREIGN KEY (`challenge_id`) REFERENCES `film_challenges` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_cq_video` FOREIGN KEY (`video_id`) REFERENCES `challenge_videos` (`id`) ON DELETE CASCADE
+  CONSTRAINT `fk_cq_video` FOREIGN KEY (`video_id`) REFERENCES `challenge_videos` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_cq_category` FOREIGN KEY (`category_id`) REFERENCES `challenge_question_categories` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 4. Challenge Submissions Table

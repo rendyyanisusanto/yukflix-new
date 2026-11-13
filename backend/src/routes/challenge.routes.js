@@ -2,6 +2,10 @@ import { Router } from 'express'
 import {
     getPublicChallenge,
     submitChallenge,
+    getQuestionCategories,
+    createQuestionCategory,
+    updateQuestionCategory,
+    deleteQuestionCategory,
     getAdminChallenges,
     getAdminChallengeDetail,
     createAdminChallenge,
@@ -26,8 +30,17 @@ const router = Router()
 /* ==========================================================================
    PUBLIC ROUTES (NO AUTH REQUIRED)
    ========================================================================== */
+router.get('/public/categories', getQuestionCategories)
 router.get('/public/:slug', getPublicChallenge)
 router.post('/public/:slug/submit', submitChallenge)
+
+/* ==========================================================================
+   QUESTION CATEGORIES MASTER (READ PUBLIC/ADMIN, WRITE ADMIN)
+   ========================================================================== */
+router.get('/categories', getQuestionCategories)
+router.post('/categories', authenticate, createQuestionCategory)
+router.put('/categories/:id', authenticate, updateQuestionCategory)
+router.delete('/categories/:id', authenticate, deleteQuestionCategory)
 
 /* ==========================================================================
    ADMIN ROUTES (AUTH REQUIRED)

@@ -48,6 +48,7 @@ const showQuestionModal = ref(false)
 const editingQuestion = ref(null)
 const questionForm = ref({
   video_id: '',
+  category_id: '',
   category: '',
   question_text: '',
   answer_type: 'essay',
@@ -55,6 +56,21 @@ const questionForm = ref({
   question_order: 1,
   is_active: 1
 })
+
+// Categories Master State
+const categories = ref([])
+const loadingCategories = ref(false)
+const filterQuestionCategory = ref('')
+
+const showCategoryModal = ref(false)
+const editingCategory = ref(null)
+const categoryForm = ref({
+  name: '',
+  description: '',
+  order_num: 1,
+  is_active: 1
+})
+const savingCategory = ref(false)
 
 // Challenge Settings Form
 const challengeForm = ref({
@@ -79,23 +95,41 @@ const PROVINCES = [
   'Papua', 'Papua Barat', 'Papua Selatan', 'Papua Tengah', 'Papua Pegunungan', 'Papua Barat Daya'
 ]
 
-const CATEGORIES = [
-  'Director of Photography (DOP) dan camera work',
-  'Camera angle, framing, shot size, dan pergerakan kamera',
-  'Wardrobe dan makeup',
-  'Props dan production design',
-  'Directing, acting, dan blocking',
-  'Location dan setting',
-  'Audio, dialog, dan sound design',
-  'Literasi visual',
-  'Literasi audio',
-  'Hubungan antara audio dan visual',
-  'Hubungan adegan dengan SDGs',
-  'Creative thinking dan ide pengembangan adegan'
-]
-
 onMounted(async () => {
-  await loadChallenges()
+  await Promise.all([
+    loadChallenges(),
+    loadCategories()
+  ])
+})
+
+async function loadCategories() {
+  loadingCategories.value = true
+  try {
+    const { data, error } = await challengeService.getCategories()
+    if (!error && data) {
+      categories.value = data
+    }
+  } catch (err) {
+    console.error('Failed to load question categories:', err)
+  } finally {
+    loadingCategories.value = false
+  }
+}
+
+const activeCategories = computed(() => {
+  return categories.value.filter(c => c.is_active)
+})
+
+const selectedQuestionCategoryDesc = computed(() => {
+  const found = categories.value.find(
+    c => c.name === questionForm.value.category || (questionForm.value.category_id && c.id === questionForm.value.category_id)
+  )
+  return found?.description || ''
+})
+
+const filteredQuestions = computed(() => {
+  if (!filterQuestionCategory.value) return questions.value
+  return questions.value.filter(q => q.category === filterQuestionCategory.value)
 })
 
 async function loadChallenges() {
@@ -115,6 +149,27 @@ async function loadChallenges() {
   }
 }
 
+function formatDateInput(dateVal) {
+  if (!dateVal) return ''
+  if (typeof dateVal === 'string') {
+    if (dateVal.includes('T')) {
+      const d = new Date(dateVal)
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+    return dateVal.substring(0, 10)
+  }
+  if (dateVal instanceof Date) {
+    const year = dateVal.getFullYear()
+    const month = String(dateVal.getMonth() + 1).padStart(2, '0')
+    const day = String(dateVal.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  return ''
+}
+
 async function loadSelectedChallenge() {
   if (!selectedChallengeId.value) return
   try {
@@ -131,8 +186,8 @@ async function loadSelectedChallenge() {
         subtitle: data.challenge.subtitle || '',
         description: data.challenge.description || '',
         status: data.challenge.status || 'published',
-        start_date: data.challenge.start_date ? data.challenge.start_date.split('T')[0] : '',
-        end_date: data.challenge.end_date ? data.challenge.end_date.split('T')[0] : ''
+        start_date: formatDateInput(data.challenge.start_date),
+        end_date: formatDateInput(data.challenge.end_date)
       }
 
       await loadSubmissions()
@@ -291,9 +346,11 @@ async function handleDeleteVideo(vId) {
 // Question CRUD
 function openAddQuestionModal(defaultVideoId = '') {
   editingQuestion.value = null
+  const firstActiveCat = activeCategories.value[0] || categories.value[0]
   questionForm.value = {
     video_id: defaultVideoId || (videos.value[0]?.id || ''),
-    category: CATEGORIES[0],
+    category_id: firstActiveCat ? firstActiveCat.id : '',
+    category: firstActiveCat ? firstActiveCat.name : '',
     question_text: '',
     answer_type: 'essay',
     optionsStr: '',
@@ -307,7 +364,8 @@ function openEditQuestionModal(q) {
   editingQuestion.value = q
   questionForm.value = {
     video_id: q.video_id,
-    category: q.category,
+    category_id: q.category_id || '',
+    category: q.category || '',
     question_text: q.question_text,
     answer_type: q.answer_type,
     optionsStr: Array.isArray(q.options) ? q.options.join('\n') : '',
@@ -315,6 +373,15 @@ function openEditQuestionModal(q) {
     is_active: q.is_active ? 1 : 0
   }
   showQuestionModal.value = true
+}
+
+function onCategorySelectChange(event) {
+  const selectedName = event.target.value
+  const found = categories.value.find(c => c.name === selectedName)
+  if (found) {
+    questionForm.value.category = found.name
+    questionForm.value.category_id = found.id
+  }
 }
 
 async function handleSaveQuestion() {
@@ -326,6 +393,7 @@ async function handleSaveQuestion() {
   try {
     const payload = {
       video_id: questionForm.value.video_id,
+      category_id: questionForm.value.category_id || null,
       category: questionForm.value.category,
       question_text: questionForm.value.question_text,
       answer_type: questionForm.value.answer_type,
@@ -343,6 +411,7 @@ async function handleSaveQuestion() {
     }
     showQuestionModal.value = false
     await loadSelectedChallenge()
+    await loadCategories()
   } catch (err) {
     alert('Gagal menyimpan pertanyaan: ' + err.message)
   }
@@ -353,8 +422,98 @@ async function handleDeleteQuestion(qId) {
   try {
     await challengeService.deleteQuestion(qId)
     await loadSelectedChallenge()
+    await loadCategories()
   } catch (err) {
     alert('Gagal menghapus pertanyaan: ' + err.message)
+  }
+}
+
+// Category Master CRUD
+function openAddCategoryModal() {
+  editingCategory.value = null
+  categoryForm.value = {
+    name: '',
+    description: '',
+    order_num: categories.value.length + 1,
+    is_active: 1
+  }
+  showCategoryModal.value = true
+}
+
+function openEditCategoryModal(cat) {
+  editingCategory.value = cat
+  categoryForm.value = {
+    name: cat.name,
+    description: cat.description || '',
+    order_num: cat.order_num || 1,
+    is_active: cat.is_active ? 1 : 0
+  }
+  showCategoryModal.value = true
+}
+
+async function handleSaveCategory() {
+  if (!categoryForm.value.name.trim()) {
+    alert('Nama kategori pertanyaan wajib diisi.')
+    return
+  }
+
+  savingCategory.value = true
+  try {
+    const payload = {
+      name: categoryForm.value.name.trim(),
+      description: categoryForm.value.description ? categoryForm.value.description.trim() : '',
+      order_num: parseInt(categoryForm.value.order_num, 10) || 1,
+      is_active: categoryForm.value.is_active ? 1 : 0
+    }
+
+    if (editingCategory.value) {
+      const { error } = await challengeService.updateCategory(editingCategory.value.id, payload)
+      if (error) throw error
+    } else {
+      const { error } = await challengeService.createCategory(payload)
+      if (error) throw error
+    }
+
+    showCategoryModal.value = false
+    await loadCategories()
+    await loadSelectedChallenge()
+  } catch (err) {
+    alert('Gagal menyimpan kategori: ' + (err.message || 'Terjadi kesalahan'))
+  } finally {
+    savingCategory.value = false
+  }
+}
+
+async function handleDeleteCategory(cat) {
+  if (cat.question_count > 0) {
+    alert(`Kategori "${cat.name}" masih digunakan oleh ${cat.question_count} pertanyaan di bank soal. Ubah kategori pertanyaan terkait terlebih dahulu sebelum menghapus master kategori ini.`)
+    return
+  }
+
+  if (!confirm(`Apakah Anda yakin ingin menghapus kategori "${cat.name}"?`)) return
+
+  try {
+    const { error } = await challengeService.deleteCategory(cat.id)
+    if (error) throw error
+    await loadCategories()
+  } catch (err) {
+    alert('Gagal menghapus kategori: ' + (err.message || 'Terjadi kesalahan'))
+  }
+}
+
+async function toggleCategoryActive(cat) {
+  try {
+    const newStatus = cat.is_active ? 0 : 1
+    const { error } = await challengeService.updateCategory(cat.id, {
+      name: cat.name,
+      description: cat.description,
+      order_num: cat.order_num,
+      is_active: newStatus
+    })
+    if (error) throw error
+    cat.is_active = newStatus
+  } catch (err) {
+    alert('Gagal mengubah status kategori: ' + (err.message || 'Terjadi kesalahan'))
   }
 }
 
@@ -362,7 +521,12 @@ async function handleDeleteQuestion(qId) {
 async function handleSaveChallengeSettings() {
   savingChallenge.value = true
   try {
-    const { error: err } = await challengeService.updateAdminChallenge(selectedChallengeId.value, challengeForm.value)
+    const payload = {
+      ...challengeForm.value,
+      start_date: challengeForm.value.start_date || null,
+      end_date: challengeForm.value.end_date || null
+    }
+    const { error: err } = await challengeService.updateAdminChallenge(selectedChallengeId.value, payload)
     if (err) throw err
     alert('Pengaturan challenge berhasil diperbarui.')
     await loadSelectedChallenge()
@@ -399,14 +563,14 @@ function getStatusBadge(status) {
           <span>Film Challenge Management</span>
         </h1>
         <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          Kelola program National Youth Film Crew Challenge, video YouTube, bank soal, dan kurasi peserta.
+          Kelola program National Youth Film Crew & Talent Challenge, video YouTube, bank soal, dan kurasi peserta.
         </p>
       </div>
 
       <!-- Action buttons -->
       <div class="flex items-center gap-2 flex-wrap">
         <a 
-          :href="`/challenge/${challengeDetail?.slug || 'national-youth-film-crew'}`" 
+          :href="`/challenge/${challengeDetail?.slug || 'national-youth-film-crew-talent'}`" 
           target="_blank"
           class="px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:border-primary text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5 transition-colors"
         >
@@ -463,6 +627,15 @@ function getStatusBadge(status) {
       >
         <span class="material-icons text-base">help_outline</span>
         <span>Bank Pertanyaan ({{ questions.length }})</span>
+      </button>
+
+      <button 
+        @click="activeTab = 'categories'"
+        class="px-4 py-2.5 text-sm font-semibold border-b-2 transition-all flex items-center gap-2"
+        :class="activeTab === 'categories' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-300'"
+      >
+        <span class="material-icons text-base">category</span>
+        <span>Master Kategori ({{ categories.length }})</span>
       </button>
 
       <button 
@@ -781,29 +954,61 @@ function getStatusBadge(status) {
     <!-- TAB 4: QUESTIONS MANAGEMENT -->
     <!-- ===================================================================== -->
     <div v-else-if="activeTab === 'questions'" class="space-y-4">
-      <div class="flex items-center justify-between">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 class="text-lg font-bold text-white">Bank Pertanyaan Challenge</h2>
           <p class="text-xs text-gray-400">Pertanyaan observasi audio-visual, SDGs, dan creative thinking.</p>
         </div>
-        <button 
-          @click="openAddQuestionModal()"
-          class="px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-xs font-semibold flex items-center gap-1.5"
-        >
-          <span class="material-icons text-sm">add</span>
-          <span>Tambah Pertanyaan</span>
-        </button>
+        <div class="flex items-center gap-2">
+          <button 
+            @click="activeTab = 'categories'"
+            class="px-3.5 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+          >
+            <span class="material-icons text-sm text-primary">category</span>
+            <span>Master Kategori ({{ categories.length }})</span>
+          </button>
+          <button 
+            @click="openAddQuestionModal()"
+            class="px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+          >
+            <span class="material-icons text-sm">add</span>
+            <span>Tambah Pertanyaan</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Category Filter Bar -->
+      <div class="p-3.5 rounded-xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <span class="text-gray-400 font-medium">Filter Kategori:</span>
+          <select 
+            v-model="filterQuestionCategory"
+            class="px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-xs text-gray-900 dark:text-white outline-none focus:border-primary"
+          >
+            <option value="">Semua Kategori ({{ questions.length }})</option>
+            <option v-for="cat in categories" :key="cat.id" :value="cat.name">
+              {{ cat.name }} ({{ cat.question_count || 0 }})
+            </option>
+          </select>
+        </div>
+        <div class="text-gray-500 text-[11px]">
+          Menampilkan {{ filteredQuestions.length }} dari {{ questions.length }} pertanyaan
+        </div>
       </div>
 
       <div class="space-y-3">
+        <div v-if="filteredQuestions.length === 0" class="p-8 text-center text-gray-500 bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-gray-700">
+          Tidak ada pertanyaan untuk kategori ini.
+        </div>
         <div 
-          v-for="q in questions" 
+          v-for="q in filteredQuestions" 
           :key="q.id"
           class="p-5 rounded-xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 space-y-2.5"
         >
           <div class="flex items-center justify-between gap-4 flex-wrap">
             <div class="flex items-center gap-2 flex-wrap">
-              <span class="px-2.5 py-0.5 rounded-full bg-pink-500/20 text-pink-400 text-xs font-semibold">
+              <span class="px-2.5 py-0.5 rounded-full bg-pink-500/20 text-pink-400 text-xs font-semibold flex items-center gap-1">
+                <span class="material-icons text-xs">label</span>
                 {{ q.category }}
               </span>
               <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/5 text-gray-400">
@@ -811,6 +1016,9 @@ function getStatusBadge(status) {
               </span>
               <span class="text-xs text-gray-500">
                 Urutan #{{ q.question_order }}
+              </span>
+              <span v-if="!q.is_active" class="px-2 py-0.5 rounded text-[10px] bg-red-500/20 text-red-400">
+                Nonaktif
               </span>
             </div>
 
@@ -834,12 +1042,138 @@ function getStatusBadge(status) {
             {{ q.question_text }}
           </p>
 
+          <p v-if="q.category_description" class="text-[11px] text-gray-400 dark:text-gray-400 italic">
+            Fokus Observasi: {{ q.category_description }}
+          </p>
+
           <div v-if="q.options && q.options.length" class="text-xs text-gray-400 pt-1">
             <span class="text-gray-500 font-medium">Pilihan:</span>
             <ul class="list-disc list-inside mt-0.5 space-y-0.5">
               <li v-for="(opt, oIdx) in q.options" :key="oIdx">{{ opt }}</li>
             </ul>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 5: MASTER KATEGORI SOAL -->
+    <!-- ===================================================================== -->
+    <div v-else-if="activeTab === 'categories'" class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <span class="material-icons text-primary text-xl">category</span>
+            <span>Master Kategori Pertanyaan Challenge</span>
+          </h2>
+          <p class="text-xs text-gray-400">
+            Kategori ini disimpan di database, otomatis digunakan saat membuat pertanyaan challenge, dan ditampilkan di formulir pendaftaran publik.
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button 
+            @click="loadCategories"
+            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
+            title="Refresh Kategori"
+          >
+            <span class="material-icons text-base">refresh</span>
+          </button>
+          <button 
+            @click="openAddCategoryModal()"
+            class="px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+          >
+            <span class="material-icons text-sm">add</span>
+            <span>Tambah Kategori</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Master Categories Table -->
+      <div class="bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 text-gray-500 uppercase tracking-wider font-semibold">
+              <tr>
+                <th class="py-3 px-4 w-16 text-center">Urutan</th>
+                <th class="py-3 px-4">Nama Kategori</th>
+                <th class="py-3 px-4">Deskripsi / Ruang Lingkup</th>
+                <th class="py-3 px-4 text-center">Status</th>
+                <th class="py-3 px-4 text-center">Jumlah Soal</th>
+                <th class="py-3 px-4 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
+              <tr v-if="loadingCategories">
+                <td colspan="6" class="py-12 text-center text-gray-500">Memuat master kategori...</td>
+              </tr>
+              <tr v-else-if="categories.length === 0">
+                <td colspan="6" class="py-12 text-center text-gray-500">Belum ada kategori pertanyaan. Klik "Tambah Kategori" untuk membuat baru.</td>
+              </tr>
+              <tr 
+                v-for="cat in categories" 
+                :key="cat.id"
+                class="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+              >
+                <!-- Order -->
+                <td class="py-3 px-4 text-center font-mono font-bold text-gray-400">
+                  #{{ cat.order_num }}
+                </td>
+
+                <!-- Category Name -->
+                <td class="py-3 px-4 font-semibold text-gray-900 dark:text-white">
+                  <div class="flex items-center gap-2">
+                    <span class="material-icons text-primary text-sm">label</span>
+                    <span>{{ cat.name }}</span>
+                  </div>
+                </td>
+
+                <!-- Description -->
+                <td class="py-3 px-4 text-gray-500 dark:text-gray-400 max-w-md">
+                  {{ cat.description || '-' }}
+                </td>
+
+                <!-- Status Active / Toggle -->
+                <td class="py-3 px-4 text-center">
+                  <button 
+                    @click="toggleCategoryActive(cat)"
+                    class="px-2.5 py-1 rounded-full text-[11px] font-semibold cursor-pointer transition-colors"
+                    :class="cat.is_active ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30'"
+                    :title="cat.is_active ? 'Klik untuk menonaktifkan' : 'Klik untuk mengaktifkan'"
+                  >
+                    {{ cat.is_active ? 'Aktif' : 'Nonaktif' }}
+                  </button>
+                </td>
+
+                <!-- Question Count -->
+                <td class="py-3 px-4 text-center">
+                  <span class="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-mono font-bold" :class="cat.question_count > 0 ? 'bg-primary/20 text-primary' : 'bg-gray-500/10 text-gray-500'">
+                    {{ cat.question_count || 0 }}
+                  </span>
+                </td>
+
+                <!-- Actions -->
+                <td class="py-3 px-4 text-center">
+                  <div class="flex items-center justify-center gap-2">
+                    <button 
+                      @click="openEditCategoryModal(cat)"
+                      class="px-2 py-1 rounded hover:bg-primary/10 text-primary font-semibold transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      @click="handleDeleteCategory(cat)"
+                      class="px-2 py-1 rounded hover:bg-red-500/10 text-red-400 font-semibold transition-colors"
+                      :disabled="cat.question_count > 0"
+                      :class="cat.question_count > 0 ? 'opacity-40 cursor-not-allowed' : ''"
+                      :title="cat.question_count > 0 ? 'Tidak dapat dihapus karena masih digunakan soal' : 'Hapus kategori'"
+                    >
+                      Hapus
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -1183,13 +1517,30 @@ function getStatusBadge(status) {
         </div>
 
         <div>
-          <label class="block text-gray-400 mb-1">Kategori Pertanyaan</label>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-gray-400">Kategori Pertanyaan <span class="text-pink-400">*</span></label>
+            <button 
+              type="button" 
+              @click="activeTab = 'categories'; showQuestionModal = false"
+              class="text-[11px] text-primary hover:underline flex items-center gap-1 font-medium cursor-pointer"
+              title="Buka tab Master Kategori"
+            >
+              <span class="material-icons text-xs">settings</span> Kelola Master Kategori
+            </button>
+          </div>
           <select 
-            v-model="questionForm.category"
-            class="w-full px-3 py-2 rounded-lg bg-[#1A1D24] border border-white/10 text-white outline-none"
+            :value="questionForm.category"
+            @change="onCategorySelectChange"
+            class="w-full px-3 py-2 rounded-lg bg-[#1A1D24] border border-white/10 text-white outline-none focus:border-primary"
           >
-            <option v-for="c in CATEGORIES" :key="c" :value="c">{{ c }}</option>
+            <option disabled value="">-- Pilih Kategori Dari Database --</option>
+            <option v-for="c in categories" :key="c.id" :value="c.name">
+              {{ c.name }} {{ !c.is_active ? '(Nonaktif)' : '' }}
+            </option>
           </select>
+          <p v-if="selectedQuestionCategoryDesc" class="mt-1 text-[11px] text-gray-400 italic">
+            {{ selectedQuestionCategoryDesc }}
+          </p>
         </div>
 
         <div>
@@ -1235,8 +1586,74 @@ function getStatusBadge(status) {
         </div>
 
         <div class="pt-2 flex justify-end gap-2">
-          <button @click="showQuestionModal = false" class="px-4 py-2 rounded-lg bg-white/5 text-gray-400">Batal</button>
-          <button @click="handleSaveQuestion" class="px-5 py-2 rounded-lg bg-primary text-white font-bold">Simpan</button>
+          <button @click="showQuestionModal = false" class="px-4 py-2 rounded-lg bg-white/5 text-gray-400 hover:text-white">Batal</button>
+          <button @click="handleSaveQuestion" class="px-5 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold">Simpan</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- MODAL: ADD / EDIT QUESTION CATEGORY -->
+    <!-- ===================================================================== -->
+    <div v-if="showCategoryModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div class="bg-[#12141A] rounded-2xl border border-white/15 max-w-md w-full p-6 space-y-4 shadow-2xl text-xs">
+        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <span class="material-icons text-primary text-lg">category</span>
+            <span>{{ editingCategory ? 'Edit Kategori Pertanyaan' : 'Tambah Kategori Pertanyaan' }}</span>
+          </h3>
+          <button @click="showCategoryModal = false" class="text-gray-400 hover:text-white">
+            <span class="material-icons text-base">close</span>
+          </button>
+        </div>
+
+        <div>
+          <label class="block text-gray-400 mb-1">Nama Kategori <span class="text-pink-400">*</span></label>
+          <input 
+            type="text" 
+            v-model="categoryForm.name"
+            placeholder="Contoh: Lighting & Penataan Cahaya"
+            class="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-xs outline-none focus:border-primary"
+          />
+        </div>
+
+        <div>
+          <label class="block text-gray-400 mb-1">Deskripsi / Ruang Lingkup Observasi</label>
+          <textarea 
+            v-model="categoryForm.description"
+            rows="3"
+            placeholder="Jelaskan aspek kompetensi atau pengamatan apa yang dinilai pada kategori ini..."
+            class="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-xs outline-none focus:border-primary"
+          ></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-gray-400 mb-1">Urutan Tampilan</label>
+            <input 
+              type="number" 
+              v-model="categoryForm.order_num"
+              class="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-xs outline-none focus:border-primary"
+            />
+          </div>
+          <div>
+            <label class="block text-gray-400 mb-1">Status Kategori</label>
+            <select 
+              v-model="categoryForm.is_active"
+              class="w-full px-3 py-2 rounded-lg bg-[#1A1D24] border border-white/10 text-white text-xs outline-none focus:border-primary"
+            >
+              <option :value="1">Aktif</option>
+              <option :value="0">Non-Aktif</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2 border-t border-white/10">
+          <button @click="showCategoryModal = false" class="px-4 py-2 rounded-lg bg-white/5 text-gray-400 hover:text-white">Batal</button>
+          <button @click="handleSaveCategory" :disabled="savingCategory" class="px-5 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold flex items-center gap-1.5">
+            <span v-if="savingCategory" class="material-icons text-xs animate-spin">refresh</span>
+            <span>{{ savingCategory ? 'Menyimpan...' : 'Simpan Kategori' }}</span>
+          </button>
         </div>
       </div>
     </div>

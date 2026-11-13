@@ -60,7 +60,7 @@ async function downloadFileLocally(remoteUrl, defaultFolder = 'media') {
             fs.writeFileSync(targetPath, Buffer.from(buffer))
         }
 
-        return `${BASE_URL}/uploads/${folder}/${filename}`
+        return `/uploads/${folder}/${filename}`
     } catch (err) {
         console.warn(`[Download] Error downloading ${remoteUrl}:`, err.message)
         return remoteUrl

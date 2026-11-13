@@ -46,8 +46,8 @@ export function handleUpload(req, res) {
     }
 
     const folder = req.query.folder || req.body.folder || 'media'
-    const baseUrl = process.env.BASE_URL || 'http://localhost:5000'
-    const fileUrl = `${baseUrl}/uploads/${folder}/${req.file.filename}`
+    // Relative path so the URL is valid on any domain (localhost, tunnel, production)
+    const fileUrl = `/uploads/${folder}/${req.file.filename}`
 
     return res.json({
         success: true,

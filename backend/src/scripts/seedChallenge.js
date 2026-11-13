@@ -18,7 +18,7 @@ const DB_NAME = process.env.DB_NAME || 'kinarya-yukflix'
 
 export async function runChallengeMigrationAndSeed() {
     console.log(`[Challenge Seed] Connecting to MySQL on ${DB_HOST}:${DB_PORT}/${DB_NAME}...`)
-    
+
     const connection = await mysql.createConnection({
         host: DB_HOST,
         port: DB_PORT,
@@ -37,8 +37,68 @@ export async function runChallengeMigrationAndSeed() {
             console.log('[Challenge Seed] Tables verified.')
         }
 
+        // Ensure category_id exists on challenge_questions if table already existed prior to migration
+        const [cqCols] = await connection.query(`SHOW COLUMNS FROM \`challenge_questions\` LIKE 'category_id'`)
+        if (cqCols.length === 0) {
+            await connection.query(`ALTER TABLE \`challenge_questions\` ADD COLUMN \`category_id\` VARCHAR(36) NULL AFTER \`video_id\``)
+            console.log('[Challenge Seed] Added category_id column to challenge_questions.')
+        }
+
+        // Seed default categories
+        const defaultCategories = [
+            { name: 'Director of Photography (DOP) dan camera work', desc: 'Pengamatan pencahayaan, pemilihan lensa, dan estetika pergerakan kamera.', order: 1 },
+            { name: 'Camera angle, framing, shot size, dan pergerakan kamera', desc: 'Analisis tipe ukuran shot (framing), sudut pengambilan gambar, dan pergerakan kamera dinamis.', order: 2 },
+            { name: 'Wardrobe dan makeup', desc: 'Kesesuaian tata rias, gaya rambut, dan busana karakter terhadap era dan status sosial.', order: 3 },
+            { name: 'Props dan production design', desc: 'Penataan tata artistik ruangan, pemilihan properti naratif, dan makna simbolik benda.', order: 4 },
+            { name: 'Directing, acting, dan blocking', desc: 'Penyutradaraan emosional, penghayatan peran para aktor, serta blocking di panggung set.', order: 5 },
+            { name: 'Location dan setting', desc: 'Pemilihan lokasi riil vs studio dan pengaruh setting lingkungan terhadap tensi dramatis cerita.', order: 6 },
+            { name: 'Audio, dialog, dan sound design', desc: 'Ketajaman rekam audio langsung, dialog vokal, sound effect (Foley), serta ambient noise.', order: 7 },
+            { name: 'Literasi visual', desc: 'Kemampuan membaca metafora visual, semiotika gambar, dan arti filosofis di balik komposisi visual.', order: 8 },
+            { name: 'Literasi audio', desc: 'Pembedahan musik latar, mood score, ritme tempo lagu, serta kontras keheningan adegan.', order: 9 },
+            { name: 'Hubungan antara audio dan visual', desc: 'Harmoni pacing editing pemotongan gambar (cutting) dengan birama dan dinamika suara.', order: 10 },
+            { name: 'Hubungan adegan dengan SDGs', desc: 'Keterkaitan alur adegan dan isu film dengan 17 Tujuan Pembangunan Berkelanjutan dunia.', order: 11 },
+            { name: 'Creative thinking dan ide pengembangan adegan', desc: 'Pengembangan ide plot twist, alternatif resolusi, atau variasi penataan adegan baru.', order: 12 }
+        ]
+
+        console.log('[Challenge Seed] Verifying question categories...')
+        const categoryMap = new Map()
+        for (const cat of defaultCategories) {
+            const [existingCat] = await connection.query(
+                'SELECT `id`, `name` FROM `challenge_question_categories` WHERE `name` = ? LIMIT 1',
+                [cat.name]
+            )
+            if (existingCat.length > 0) {
+                categoryMap.set(cat.name, existingCat[0].id)
+            } else {
+                const catId = crypto.randomUUID()
+                await connection.query(`
+                    INSERT INTO \`challenge_question_categories\` (\`id\`, \`name\`, \`description\`, \`order_num\`, \`is_active\`)
+                    VALUES (?, ?, ?, ?, 1)
+                `, [catId, cat.name, cat.desc, cat.order])
+                categoryMap.set(cat.name, catId)
+                console.log(`[Challenge Seed] Inserted category: ${cat.name}`)
+            }
+        }
+
+        // Link existing challenge_questions without category_id to challenge_question_categories
+        for (const [name, catId] of categoryMap.entries()) {
+            await connection.query(
+                'UPDATE `challenge_questions` SET `category_id` = ? WHERE `category` = ? AND (`category_id` IS NULL OR `category_id` = "")',
+                [catId, name]
+            )
+        }
+
         // Check if default challenge exists
-        const challengeSlug = 'national-youth-film-crew'
+        const challengeSlug = 'national-youth-film-crew-talent'
+
+        // Update legacy slug/title if present
+        await connection.query(`
+            UPDATE \`film_challenges\`
+            SET \`slug\` = 'national-youth-film-crew-talent',
+                \`title\` = 'National Youth Film Crew & Talent Challenge'
+            WHERE \`slug\` = 'national-youth-film-crew'
+        `)
+
         const [existing] = await connection.query(
             'SELECT * FROM `film_challenges` WHERE `slug` = ? LIMIT 1',
             [challengeSlug]
@@ -57,7 +117,7 @@ export async function runChallengeMigrationAndSeed() {
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 challengeId,
-                'National Youth Film Crew Challenge',
+                'National Youth Film Crew & Talent Challenge',
                 challengeSlug,
                 'Kinarya Coop',
                 'Program seleksi dan tantangan uji kompetensi audio-visual, literasi sinematografi, dan eksplorasi isu SDGs bagi pelajar dan generasi muda Indonesia yang berminat berkarier dalam industri perfilman nasional.',
@@ -255,12 +315,13 @@ export async function runChallengeMigrationAndSeed() {
             for (const q of questions) {
                 await connection.query(`
                     INSERT INTO \`challenge_questions\` (
-                        \`id\`, \`challenge_id\`, \`video_id\`, \`category\`, \`question_text\`, \`answer_type\`, \`options\`, \`question_order\`, \`is_active\`
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        \`id\`, \`challenge_id\`, \`video_id\`, \`category_id\`, \`category\`, \`question_text\`, \`answer_type\`, \`options\`, \`question_order\`, \`is_active\`
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `, [
                     crypto.randomUUID(),
                     challengeId,
                     q.video_id,
+                    categoryMap.get(q.category) || null,
                     q.category,
                     q.text,
                     q.type,

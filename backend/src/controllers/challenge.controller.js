@@ -51,8 +51,8 @@ export async function getPublicChallenge(req, res) {
         const { slug } = req.params
 
         const [challenges] = await pool.query(
-            'SELECT `id`, `title`, `slug`, `subtitle`, `description`, `status`, `start_date`, `end_date` FROM `film_challenges` WHERE `slug` = ? AND `status` = "published" LIMIT 1',
-            [slug]
+            'SELECT `id`, `title`, `slug`, `subtitle`, `description`, `status`, `start_date`, `end_date` FROM `film_challenges` WHERE (`slug` = ? OR (`slug` = "national-youth-film-crew-talent" AND ? = "national-youth-film-crew")) AND `status` = "published" LIMIT 1',
+            [slug, slug]
         )
 
         if (challenges.length === 0) {
@@ -72,12 +72,30 @@ export async function getPublicChallenge(req, res) {
             ORDER BY \`video_order\` ASC
         `, [challenge.id])
 
-        // Fetch active questions
+        // Fetch active question categories
+        const [categories] = await pool.query(`
+            SELECT \`id\`, \`name\`, \`description\`, \`order_num\`
+            FROM \`challenge_question_categories\`
+            WHERE \`is_active\` = 1
+            ORDER BY \`order_num\` ASC, \`name\` ASC
+        `)
+
+        // Fetch active questions joined with categories
         const [rawQuestions] = await pool.query(`
-            SELECT \`id\`, \`video_id\`, \`category\`, \`question_text\`, \`answer_type\`, \`options\`, \`question_order\`
-            FROM \`challenge_questions\`
-            WHERE \`challenge_id\` = ? AND \`is_active\` = 1
-            ORDER BY \`question_order\` ASC, \`created_at\` ASC
+            SELECT 
+                cq.\`id\`, 
+                cq.\`video_id\`, 
+                cq.\`category_id\`, 
+                COALESCE(cqc.\`name\`, cq.\`category\`) AS \`category\`, 
+                cqc.\`description\` AS \`category_description\`,
+                cq.\`question_text\`, 
+                cq.\`answer_type\`, 
+                cq.\`options\`, 
+                cq.\`question_order\`
+            FROM \`challenge_questions\` cq
+            LEFT JOIN \`challenge_question_categories\` cqc ON (cq.\`category_id\` = cqc.\`id\` OR cq.\`category\` = cqc.\`name\`)
+            WHERE cq.\`challenge_id\` = ? AND cq.\`is_active\` = 1
+            ORDER BY cq.\`question_order\` ASC, cq.\`created_at\` ASC
         `, [challenge.id])
 
         const questions = rawQuestions.map(q => {
@@ -100,7 +118,8 @@ export async function getPublicChallenge(req, res) {
             data: {
                 challenge,
                 videos,
-                questions
+                questions,
+                categories
             }
         })
     } catch (error) {
@@ -177,8 +196,8 @@ export async function submitChallenge(req, res) {
 
         // Verify challenge exists and is open
         const [challenges] = await pool.query(
-            'SELECT `id`, `status` FROM `film_challenges` WHERE `slug` = ? AND `status` = "published" LIMIT 1',
-            [slug]
+            'SELECT `id`, `status` FROM `film_challenges` WHERE (`slug` = ? OR (`slug` = "national-youth-film-crew-talent" AND ? = "national-youth-film-crew")) AND `status` = "published" LIMIT 1',
+            [slug, slug]
         )
 
         if (challenges.length === 0) {
@@ -236,8 +255,8 @@ export async function submitChallenge(req, res) {
             if (Array.isArray(answers)) {
                 for (const item of answers) {
                     if (item.question_id && item.answer_text !== undefined && item.answer_text !== null) {
-                        const ansStr = Array.isArray(item.answer_text) 
-                            ? JSON.stringify(item.answer_text) 
+                        const ansStr = Array.isArray(item.answer_text)
+                            ? JSON.stringify(item.answer_text)
                             : String(item.answer_text)
 
                         if (ansStr.trim()) {
@@ -317,9 +336,20 @@ export async function getAdminChallengeDetail(req, res) {
             [id]
         )
 
-        const [questions] = await pool.query(
-            'SELECT * FROM challenge_questions WHERE challenge_id = ? ORDER BY question_order ASC, created_at ASC',
-            [id]
+        const [questions] = await pool.query(`
+            SELECT 
+                cq.*, 
+                COALESCE(cqc.name, cq.category) AS category,
+                cqc.description AS category_description
+            FROM challenge_questions cq
+            LEFT JOIN challenge_question_categories cqc ON (cq.category_id = cqc.id OR cq.category = cqc.name)
+            WHERE cq.challenge_id = ? 
+            ORDER BY cq.question_order ASC, cq.created_at ASC
+        `, [id])
+
+        // Fetch categories list as well
+        const [categories] = await pool.query(
+            'SELECT * FROM challenge_question_categories ORDER BY order_num ASC, name ASC'
         )
 
         const formattedQuestions = questions.map(q => ({
@@ -332,7 +362,8 @@ export async function getAdminChallengeDetail(req, res) {
             data: {
                 challenge: challenges[0],
                 videos,
-                questions: formattedQuestions
+                questions: formattedQuestions,
+                categories
             }
         })
     } catch (error) {
@@ -491,9 +522,9 @@ export async function deleteAdminVideo(req, res) {
 export async function addAdminQuestion(req, res) {
     try {
         const { videoId } = req.params
-        const { category, question_text, answer_type = 'essay', options, question_order = 1, is_active = 1 } = req.body
+        const { category, category_id, question_text, answer_type = 'essay', options, question_order = 1, is_active = 1 } = req.body
 
-        if (!category || !question_text) {
+        if ((!category && !category_id) || !question_text) {
             return res.status(400).json({ success: false, message: 'Kategori dan pertanyaan wajib diisi.' })
         }
 
@@ -506,12 +537,29 @@ export async function addAdminQuestion(req, res) {
         const qId = crypto.randomUUID()
         const optsJson = options ? (typeof options === 'string' ? options : JSON.stringify(options)) : null
 
-        await pool.query(`
-            INSERT INTO challenge_questions (id, challenge_id, video_id, category, question_text, answer_type, options, question_order, is_active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [qId, challengeId, videoId, category, question_text, answer_type, optsJson, question_order, is_active ? 1 : 0])
+        let resolvedCatId = category_id || null
+        let resolvedCatName = category ? category.trim() : ''
 
-        const [created] = await pool.query('SELECT * FROM challenge_questions WHERE id = ?', [qId])
+        if (resolvedCatId && !resolvedCatName) {
+            const [catRows] = await pool.query('SELECT name FROM challenge_question_categories WHERE id = ?', [resolvedCatId])
+            if (catRows.length > 0) resolvedCatName = catRows[0].name
+        } else if (!resolvedCatId && resolvedCatName) {
+            const [catRows] = await pool.query('SELECT id FROM challenge_question_categories WHERE name = ?', [resolvedCatName])
+            if (catRows.length > 0) resolvedCatId = catRows[0].id
+        }
+
+        await pool.query(`
+            INSERT INTO challenge_questions (id, challenge_id, video_id, category_id, category, question_text, answer_type, options, question_order, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [qId, challengeId, videoId, resolvedCatId, resolvedCatName, question_text, answer_type, optsJson, question_order, is_active ? 1 : 0])
+
+        const [created] = await pool.query(`
+            SELECT cq.*, COALESCE(cqc.name, cq.category) AS category, cqc.description AS category_description
+            FROM challenge_questions cq
+            LEFT JOIN challenge_question_categories cqc ON (cq.category_id = cqc.id OR cq.category = cqc.name)
+            WHERE cq.id = ?
+        `, [qId])
+
         return res.status(201).json({
             success: true,
             data: {
@@ -528,15 +576,27 @@ export async function addAdminQuestion(req, res) {
 export async function updateAdminQuestion(req, res) {
     try {
         const { questionId } = req.params
-        const { category, question_text, answer_type, options, question_order, is_active, video_id } = req.body
+        const { category, category_id, question_text, answer_type, options, question_order, is_active, video_id } = req.body
 
-        const optsJson = options !== undefined 
-            ? (typeof options === 'string' ? options : JSON.stringify(options)) 
+        const optsJson = options !== undefined
+            ? (typeof options === 'string' ? options : JSON.stringify(options))
             : null
+
+        let resolvedCatId = category_id !== undefined ? category_id : null
+        let resolvedCatName = category !== undefined ? (category ? category.trim() : '') : null
+
+        if (resolvedCatId && !resolvedCatName) {
+            const [catRows] = await pool.query('SELECT name FROM challenge_question_categories WHERE id = ?', [resolvedCatId])
+            if (catRows.length > 0) resolvedCatName = catRows[0].name
+        } else if (resolvedCatName && !resolvedCatId) {
+            const [catRows] = await pool.query('SELECT id FROM challenge_question_categories WHERE name = ?', [resolvedCatName])
+            if (catRows.length > 0) resolvedCatId = catRows[0].id
+        }
 
         await pool.query(`
             UPDATE challenge_questions SET
                 video_id = COALESCE(?, video_id),
+                category_id = COALESCE(?, category_id),
                 category = COALESCE(?, category),
                 question_text = COALESCE(?, question_text),
                 answer_type = COALESCE(?, answer_type),
@@ -546,7 +606,8 @@ export async function updateAdminQuestion(req, res) {
             WHERE id = ?
         `, [
             video_id,
-            category,
+            resolvedCatId,
+            resolvedCatName,
             question_text,
             answer_type,
             optsJson,
@@ -555,7 +616,13 @@ export async function updateAdminQuestion(req, res) {
             questionId
         ])
 
-        const [updated] = await pool.query('SELECT * FROM challenge_questions WHERE id = ?', [questionId])
+        const [updated] = await pool.query(`
+            SELECT cq.*, COALESCE(cqc.name, cq.category) AS category, cqc.description AS category_description
+            FROM challenge_questions cq
+            LEFT JOIN challenge_question_categories cqc ON (cq.category_id = cqc.id OR cq.category = cqc.name)
+            WHERE cq.id = ?
+        `, [questionId])
+
         return res.json({
             success: true,
             data: {
@@ -688,10 +755,11 @@ export async function getAdminSubmissionDetail(req, res) {
         const [answers] = await pool.query(`
             SELECT 
                 a.id as answer_id, a.answer_text, a.created_at as answered_at,
-                q.id as question_id, q.category, q.question_text, q.answer_type, q.options, q.question_order,
+                q.id as question_id, COALESCE(cqc.name, q.category) as category, q.question_text, q.answer_type, q.options, q.question_order,
                 v.id as video_id, v.video_order, v.title as video_title
             FROM challenge_answers a
             JOIN challenge_questions q ON a.question_id = q.id
+            LEFT JOIN challenge_question_categories cqc ON (q.category_id = cqc.id OR q.category = cqc.name)
             LEFT JOIN challenge_videos v ON q.video_id = v.id
             WHERE a.submission_id = ?
             ORDER BY v.video_order ASC, q.question_order ASC
@@ -857,4 +925,189 @@ export async function getAdminChallengeStats(req, res) {
         return res.status(500).json({ success: false, message: error.message })
     }
 }
+
+/* ==========================================================================
+   QUESTION CATEGORIES MASTER MANAGEMENT
+   ========================================================================== */
+
+export async function getQuestionCategories(req, res) {
+    try {
+        const { active_only } = req.query
+        const onlyActive = active_only === 'true' || active_only === '1'
+
+        const [categories] = await pool.query(`
+            SELECT 
+                cqc.id,
+                cqc.name,
+                cqc.description,
+                cqc.order_num,
+                cqc.is_active,
+                cqc.created_at,
+                cqc.updated_at,
+                COUNT(cq.id) AS question_count
+            FROM challenge_question_categories cqc
+            LEFT JOIN challenge_questions cq ON (cq.category_id = cqc.id OR cq.category = cqc.name)
+            WHERE (? = 0 OR cqc.is_active = 1)
+            GROUP BY cqc.id
+            ORDER BY cqc.order_num ASC, cqc.name ASC
+        `, [onlyActive ? 1 : 0])
+
+        return res.json({
+            success: true,
+            data: categories
+        })
+    } catch (error) {
+        console.error('getQuestionCategories error:', error)
+        return res.status(500).json({ success: false, message: error.message })
+    }
+}
+
+export async function createQuestionCategory(req, res) {
+    try {
+        const { name, description, order_num = 1, is_active = 1 } = req.body
+
+        if (!name || !name.trim()) {
+            return res.status(400).json({ success: false, message: 'Nama kategori wajib diisi.' })
+        }
+
+        const trimmedName = name.trim()
+
+        // Check uniqueness
+        const [existing] = await pool.query(
+            'SELECT id FROM challenge_question_categories WHERE name = ? LIMIT 1',
+            [trimmedName]
+        )
+        if (existing.length > 0) {
+            return res.status(400).json({ success: false, message: 'Kategori dengan nama tersebut sudah ada.' })
+        }
+
+        const id = crypto.randomUUID()
+        await pool.query(`
+            INSERT INTO challenge_question_categories (id, name, description, order_num, is_active)
+            VALUES (?, ?, ?, ?, ?)
+        `, [
+            id,
+            trimmedName,
+            description ? description.trim() : null,
+            parseInt(order_num, 10) || 1,
+            is_active ? 1 : 0
+        ])
+
+        const [created] = await pool.query('SELECT * FROM challenge_question_categories WHERE id = ?', [id])
+        return res.status(201).json({
+            success: true,
+            data: {
+                ...created[0],
+                question_count: 0
+            }
+        })
+    } catch (error) {
+        console.error('createQuestionCategory error:', error)
+        return res.status(500).json({ success: false, message: error.message })
+    }
+}
+
+export async function updateQuestionCategory(req, res) {
+    try {
+        const { id } = req.params
+        const { name, description, order_num, is_active } = req.body
+
+        if (!name || !name.trim()) {
+            return res.status(400).json({ success: false, message: 'Nama kategori wajib diisi.' })
+        }
+
+        const trimmedName = name.trim()
+
+        const [current] = await pool.query('SELECT * FROM challenge_question_categories WHERE id = ?', [id])
+        if (current.length === 0) {
+            return res.status(404).json({ success: false, message: 'Kategori tidak ditemukan.' })
+        }
+
+        // Check uniqueness with other records
+        const [existing] = await pool.query(
+            'SELECT id FROM challenge_question_categories WHERE name = ? AND id != ? LIMIT 1',
+            [trimmedName, id]
+        )
+        if (existing.length > 0) {
+            return res.status(400).json({ success: false, message: 'Nama kategori tersebut sudah digunakan.' })
+        }
+
+        const oldName = current[0].name
+
+        await pool.query(`
+            UPDATE challenge_question_categories SET
+                name = ?,
+                description = ?,
+                order_num = COALESCE(?, order_num),
+                is_active = COALESCE(?, is_active)
+            WHERE id = ?
+        `, [
+            trimmedName,
+            description !== undefined ? (description ? description.trim() : null) : current[0].description,
+            order_num !== undefined ? parseInt(order_num, 10) : current[0].order_num,
+            is_active !== undefined ? (is_active ? 1 : 0) : current[0].is_active,
+            id
+        ])
+
+        // If name changed, synchronize legacy `category` column in challenge_questions
+        if (oldName !== trimmedName) {
+            await pool.query(
+                'UPDATE challenge_questions SET category = ? WHERE category_id = ? OR category = ?',
+                [trimmedName, id, oldName]
+            )
+        }
+
+        const [updated] = await pool.query(`
+            SELECT 
+                cqc.*,
+                COUNT(cq.id) AS question_count
+            FROM challenge_question_categories cqc
+            LEFT JOIN challenge_questions cq ON (cq.category_id = cqc.id OR cq.category = cqc.name)
+            WHERE cqc.id = ?
+            GROUP BY cqc.id
+        `, [id])
+
+        return res.json({
+            success: true,
+            data: updated[0]
+        })
+    } catch (error) {
+        console.error('updateQuestionCategory error:', error)
+        return res.status(500).json({ success: false, message: error.message })
+    }
+}
+
+export async function deleteQuestionCategory(req, res) {
+    try {
+        const { id } = req.params
+
+        const [current] = await pool.query('SELECT name FROM challenge_question_categories WHERE id = ?', [id])
+        if (current.length === 0) {
+            return res.status(404).json({ success: false, message: 'Kategori tidak ditemukan.' })
+        }
+
+        // Check if any question is still using this category
+        const [usage] = await pool.query(
+            'SELECT COUNT(*) as count FROM challenge_questions WHERE category_id = ? OR category = ?',
+            [id, current[0].name]
+        )
+
+        if (usage[0].count > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `Kategori tidak dapat dihapus karena masih digunakan oleh ${usage[0].count} pertanyaan.`
+            })
+        }
+
+        await pool.query('DELETE FROM challenge_question_categories WHERE id = ?', [id])
+        return res.json({
+            success: true,
+            message: 'Kategori pertanyaan berhasil dihapus.'
+        })
+    } catch (error) {
+        console.error('deleteQuestionCategory error:', error)
+        return res.status(500).json({ success: false, message: error.message })
+    }
+}
+
 

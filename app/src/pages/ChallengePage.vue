@@ -13,6 +13,7 @@ const error = ref('')
 const challenge = ref(null)
 const videos = ref([])
 const questions = ref([])
+const categories = ref([])
 
 // Current step (1 to 6, 7 is success)
 const currentStep = ref(1)
@@ -90,7 +91,7 @@ async function loadChallenge() {
   loading.value = true
   error.value = ''
   try {
-    const slug = route.params.slug || 'national-youth-film-crew'
+    const slug = route.params.slug || 'national-youth-film-crew-talent'
     const { data, error: err } = await challengeService.getPublicChallenge(slug)
 
     if (err) throw err
@@ -98,6 +99,17 @@ async function loadChallenge() {
     challenge.value = data.challenge
     videos.value = data.videos || []
     questions.value = data.questions || []
+    categories.value = data.categories || []
+
+    // If categories not in challenge data, fetch separately as fallback
+    if (!categories.value.length) {
+      try {
+        const { data: catData } = await challengeService.getCategories({ active_only: 1 })
+        if (catData) categories.value = catData
+      } catch (catErr) {
+        console.warn('Could not load separate categories:', catErr)
+      }
+    }
   } catch (err) {
     console.error('Failed to load challenge:', err)
     error.value = err.message || 'Challenge tidak ditemukan atau pendaftaran telah ditutup.'
@@ -234,7 +246,7 @@ async function handleSubmit() {
       website: participant.value.honeypot
     }
 
-    const slug = route.params.slug || 'national-youth-film-crew'
+    const slug = route.params.slug || 'national-youth-film-crew-talent'
     const { data, error: submitErr } = await challengeService.submitChallenge(slug, payload)
 
     if (submitErr) throw submitErr
@@ -332,7 +344,7 @@ function copyRegNumber() {
               </span>
 
               <h1 class="text-3xl sm:text-5xl font-display font-extrabold text-white tracking-tight leading-tight mb-3">
-                NATIONAL YOUTH FILM CREW CHALLENGE
+                {{ challenge?.title || 'NATIONAL YOUTH FILM CREW & TALENT CHALLENGE' }}
               </h1>
               <p class="text-lg sm:text-xl font-medium text-pink-400 mb-4">
                 {{ challenge?.subtitle || 'Kinarya Coop' }}
@@ -345,15 +357,37 @@ function copyRegNumber() {
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 my-6 pt-4 border-t border-white/10 text-xs sm:text-sm">
                 <div class="flex items-center gap-2.5 text-gray-300">
                   <span class="material-icons text-primary text-lg">play_circle</span>
-                  <span>5 Video YouTube</span>
+                  <span>{{ videos.length || 5 }} Video YouTube</span>
                 </div>
                 <div class="flex items-center gap-2.5 text-gray-300">
                   <span class="material-icons text-primary text-lg">quiz</span>
-                  <span>12 Kategori Observasi</span>
+                  <span>{{ (categories && categories.length) || 12 }} Kategori Observasi</span>
                 </div>
                 <div class="flex items-center gap-2.5 text-gray-300">
                   <span class="material-icons text-primary text-lg">how_to_reg</span>
                   <span>Minat Kru & Portofolio</span>
+                </div>
+              </div>
+
+              <!-- Observation Categories Preview from Master Database -->
+              <div v-if="categories && categories.length" class="my-6 p-4 rounded-xl bg-white/5 border border-white/10 space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-semibold text-gray-300 flex items-center gap-1.5 uppercase tracking-wider">
+                    <span class="material-icons text-primary text-sm">category</span>
+                    Kategori Pengamatan & Kompetensi ({{ categories.length }})
+                  </span>
+                  <span class="text-[11px] text-pink-400 font-medium">Standar Seleksi</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <span 
+                    v-for="cat in categories" 
+                    :key="cat.id"
+                    class="px-2.5 py-1 rounded-lg bg-black/40 border border-white/10 text-xs text-gray-300 flex items-center gap-1.5 hover:border-primary/50 transition-colors"
+                    :title="cat.description || cat.name"
+                  >
+                    <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
+                    <span>{{ cat.name }}</span>
+                  </span>
                 </div>
               </div>
 
@@ -690,11 +724,16 @@ function copyRegNumber() {
             >
               <!-- Question Header & Category -->
               <div class="flex items-start justify-between gap-4">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/25 text-pink-400 text-xs font-medium">
-                  <span class="material-icons text-xs">label</span>
-                  {{ q.category }}
-                </span>
-                <span class="text-xs text-gray-500 font-medium">
+                <div class="space-y-1">
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/25 text-pink-400 text-xs font-medium">
+                    <span class="material-icons text-xs">label</span>
+                    {{ q.category }}
+                  </span>
+                  <p v-if="q.category_description" class="text-xs text-gray-400 italic">
+                    {{ q.category_description }}
+                  </p>
+                </div>
+                <span class="text-xs text-gray-500 font-medium whitespace-nowrap">
                   Soal {{ qIndex + 1 }} dari {{ activeVideoQuestions.length }}
                 </span>
               </div>
@@ -1055,7 +1094,7 @@ function copyRegNumber() {
               Terima Kasih, {{ submissionResult.full_name }}!
             </h2>
             <p class="text-gray-400 max-w-lg mx-auto text-sm">
-              Jawaban dan pendaftaran minat Anda untuk <strong>National Youth Film Crew Challenge</strong> telah berhasil tersimpan dalam sistem kami.
+              Jawaban dan pendaftaran minat Anda untuk <strong>{{ challenge?.title || 'National Youth Film Crew & Talent Challenge' }}</strong> telah berhasil tersimpan dalam sistem kami.
             </p>
           </div>
 
@@ -1110,7 +1149,7 @@ function copyRegNumber() {
     <footer class="w-full border-t border-white/10 py-6 text-center text-xs text-gray-500 mt-auto">
       <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
         <span>© 2026 Kinarya Coop & YukFlix. All rights reserved.</span>
-        <span>National Youth Film Crew Challenge</span>
+        <span>{{ challenge?.title || 'National Youth Film Crew & Talent Challenge' }}</span>
       </div>
     </footer>
   </div>

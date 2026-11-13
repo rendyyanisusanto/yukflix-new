@@ -13,6 +13,7 @@ import settingsRoutes from './routes/settings.routes.js'
 import uploadRoutes from './routes/upload.routes.js'
 import statsRoutes from './routes/stats.routes.js'
 import challengeRoutes from './routes/challenge.routes.js'
+import { relativeUploads } from './middleware/relativeUploads.js'
 
 dotenv.config()
 
@@ -36,6 +37,9 @@ app.use(cors({
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+
+// Always return media URLs as relative paths (/uploads/...) so they work on any domain
+app.use(relativeUploads)
 
 // Static media uploads serving
 app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')))
